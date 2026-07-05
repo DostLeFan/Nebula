@@ -1,0 +1,35 @@
+# List sources.
+
+file(GLOB_RECURSE NEBULA_SOURCES CONFIGURE_DEPENDS "src/*.cpp")
+file(GLOB_RECURSE NEBULA_HEADERS CONFIGURE_DEPENDS "include/*.hpp")
+
+add_library(${NEBULA_LIB_NAME} ${NEBULA_SOURCES} ${NEBULA_HEADERS})
+add_library(nebula::nebula-core ALIAS ${NEBULA_LIB_NAME})
+
+target_compile_features(${NEBULA_LIB_NAME} PUBLIC cxx_std_17)
+target_include_directories(${NEBULA_LIB_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
+if(MSVC)
+	target_compile_options(${NEBULA_LIB_NAME} PRIVATE /W4 /permissive-)
+else()
+	target_compile_options(${NEBULA_LIB_NAME} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+endif()
+
+if(WIN32)
+	target_compile_definitions(${NEBULA_LIB_NAME} PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+endif()
+
+install(
+	TARGETS ${NEBULA_LIB_NAME}
+	EXPORT chimuTargets
+	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(
+	DIRECTORY
+		${CMAKE_CURRENT_SOURCE_DIR}/include/
+	DESTINATION
+		${CMAKE_INSTALL_INCLUDEDIR}
+)

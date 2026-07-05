@@ -1,0 +1,14 @@
+# Directories
+
+build/
+bin/
+logs/
+res/
+prebuilds/
+node_modules/
+
+# Files
+
+res.zip
+package-lock.json
+*.exe

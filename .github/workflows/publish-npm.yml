@@ -1,0 +1,120 @@
+name: Publish NPM
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+
+          - os: ubuntu-24.04-arm
+            platform: linux
+            arch: arm64
+
+          - os: windows-latest
+            platform: win32
+            arch: x64
+
+          - os: windows-11-arm
+            platform: win32
+            arch: arm64
+
+          - os: macos-13
+            platform: darwin
+            arch: x64
+
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install Node.js binding dependencies
+        working-directory: bindings/node
+        run: npm install
+
+      - name: Configure
+        run: cmake --preset release -DNEBULA_BUILD_NODE=ON
+
+      - name: Build
+        run: cmake --build --preset release
+
+      - name: Upload Prebuilt
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.arch }}
+          path: build/release/prebuilds/nebula.node
+
+  publish:
+    needs: build
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Download Linux x64
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-x64
+          path: bindings/node/prebuilds/linux-x64
+
+      - name: Download Linux arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-arm64
+          path: bindings/node/prebuilds/linux-arm64
+
+      - name: Download Win32 x64
+        uses: actions/download-artifact@v4
+        with:
+          name: win32-x64
+          path: bindings/node/prebuilds/win32-x64
+
+      - name: Download Win32 arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: win32-arm64
+          path: bindings/node/prebuilds/win32-arm64
+
+      - name: Download Darwin x64
+        uses: actions/download-artifact@v4
+        with:
+          name: darwin-x64
+          path: bindings/node/prebuilds/darwin-x64
+
+      - name: Download Darwin arm64
+        uses: actions/download-artifact@v4
+        with:
+          name: darwin-arm64
+          path: bindings/node/prebuilds/darwin-arm64
+
+      - name: Publish
+        working-directory: bindings/node
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

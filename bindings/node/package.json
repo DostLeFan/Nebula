@@ -1,0 +1,49 @@
+{
+	"name": "nebula",
+	"version": "0.1.0",
+	"description": "Game Boy emulator powered by nebula",
+	"main": "index.js",
+	"types": "index.d.ts",
+	"license": "MIT",
+	"keywords": [
+		"nebula",
+		"GameBoy",
+		"gameboy",
+		"Game Boy",
+		"game boy",
+		"emulator"
+	],
+	"files": [
+		"index.js",
+		"index.d.ts",
+		"prebuilds/"
+	],
+	"os": [
+		"win32",
+		"linux",
+		"darwin"
+	],
+	"cpu": [
+		"x64",
+		"arm64"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/DostLeFan/nebula.git"
+	},
+	"homepage": "https://github.com/DostLeFan/nebula",
+	"bugs": {
+		"url": "https://github.com/DostLeFan/nebula/issues"
+	},
+	"engines": {
+		"node": ">=18"
+	},
+	"devDependencies": {
+		"cmake-js": "^7.3.0",
+		"node-addon-api": "^8.0.0",
+		"node-api-headers": "^1.4.0"
+	},
+	"scripts": {
+		"build-native": "cmake-js compile"
+	}
+}

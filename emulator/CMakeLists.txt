@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 3.25)
+
+if(MSVC)
+	set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
+# List sources.
+
+file(GLOB_RECURSE EMULATOR_SOURCES CONFIGURE_DEPENDS "src/*.cpp")
+file(GLOB_RECURSE EMULATOR_HEADERS CONFIGURE_DEPENDS "include/*.hpp")
+
+add_executable(${NEBULA_EMULATOR_NAME} ${EMULATOR_SOURCES} ${EMULATOR_HEADERS})
+
+target_link_libraries(${NEBULA_EMULATOR_NAME} PRIVATE ${NEBULA_LIB_NAME})
+
+set_target_properties(${NEBULA_EMULATOR_NAME} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)

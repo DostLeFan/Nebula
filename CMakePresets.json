@@ -1,0 +1,72 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": { "major": 3, "minor": 25 },
+
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin/${presetName}",
+        "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/bin/${presetName}",
+        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/bin/${presetName}/lib"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin/debug",
+        "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/bin/debug",
+        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/bin/debug/lib"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_RUNTIME_OUTPUT_DIRECTORY": "${sourceDir}/bin/release",
+        "CMAKE_LIBRARY_OUTPUT_DIRECTORY": "${sourceDir}/bin/release",
+        "CMAKE_ARCHIVE_OUTPUT_DIRECTORY": "${sourceDir}/bin/release/lib"
+      }
+    }
+  ],
+
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "jobs": 0
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "jobs": 0
+    }
+  ],
+
+  "workflowPresets": [
+    {
+      "name": "debug",
+      "displayName": "Configure + Build Debug",
+      "steps": [
+        { "type": "configure", "name": "debug" },
+        { "type": "build",     "name": "debug" }
+      ]
+    },
+    {
+      "name": "release",
+      "displayName": "Configure + Build Release",
+      "steps": [
+        { "type": "configure", "name": "release" },
+        { "type": "build",     "name": "release" }
+      ]
+    }
+  ]
+}
