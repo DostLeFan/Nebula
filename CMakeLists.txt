@@ -15,7 +15,7 @@ include(GNUInstallDirs)
 
 option(NEBULA_BUILD_EMULATOR_APP "Build emulator executable" ON)
 option(NEBULA_BUILD_NODE "Build NodeJS bindings" OFF)
-option(NEBULA_BUILD_TEST "Build unit tests" OFF)
+option(NEBULA_BUILD_TEST "Build unit tests" ON)
 
 add_subdirectory(core)
 
