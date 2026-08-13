@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- MBC base class
+- NoMBC, MBC1, MBC2, MBC3 and MBC5
+- Cartridge
+- Memory
+- Unit tests
+
 ## [0.0.0] - 2026-07-05
 
 ### Added
@@ -15,5 +23,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - release.yml to compile on Windows, Linux and MacOS
 - Base (real base)
 
-[unreleased]: https://github.com/DostLeFan/Nebula/compare/v0.0.4...HEAD
+[unreleased]: https://github.com/DostLeFan/Nebula/compare/v0.0.0...HEAD
 [v0.0.0]: https://github.com/DostLeFan/Nebula/releases/tag/v0.0.0

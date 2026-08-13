@@ -15,9 +15,21 @@ namespace nebula
 			explicit Memory(Cartridge& cartridge);
 			~Memory() = default;
 			
+			// Generic 16-bit bus access (used by the CPU).
+			uint8_t read(uint16_t addr) const;
+			void write(uint16_t addr, uint8_t value);
+			
 			// Direct VRAM access for PPU (bypasses PPU access restrictions).
 			uint8_t readVRAM(uint16_t addr) const;
 			void writeVRAM(uint16_t addr, uint8_t value);
+			
+			// Direct OAM access for PPU (bypasses PPU access restrictions).
+			uint8_t readOAM(uint16_t addr) const;
+			void writeOAM(uint16_t addr, uint8_t value);
+			
+			// Called by the PPU to lock/unlock VRAM and OAM depending on its current mode (mode 2/3).
+			inline void setVRAMAccessible(bool accessible) { m_vramAccessible = accessible; }
+			inline void setOAMAccessible(bool accessible) { m_oamAccessible = accessible; }
 		
 		private:
 			Cartridge& m_cartridge;
@@ -38,6 +50,8 @@ namespace nebula
 			// Internal helpers for I/O.
 			uint8_t readIO(uint16_t addr) const;
 			void writeIO(uint16_t addr, uint8_t value);
+			
+			void initIORegisters(); // Power-up values (DMG).
 	};
 }
 

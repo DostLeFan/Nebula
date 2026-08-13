@@ -6,6 +6,7 @@
 #include "../../../include/nebula/Cartridge/MBC1.hpp"
 #include "../../../include/nebula/Cartridge/MBC2.hpp"
 #include "../../../include/nebula/Cartridge/MBC3.hpp"
+#include "../../../include/nebula/Cartridge/MBC5.hpp"
 
 namespace nebula
 {
@@ -96,9 +97,9 @@ namespace nebula
 				m_mbc = std::make_unique<MBC3>(m_romData, m_ramData);
 			break;
 			
-			/*case MBCType::MBC5:
+			case MBCType::MBC5:
 				m_mbc = std::make_unique<MBC5>(m_romData, m_ramData);
-			break;*/
+			break;
 			
 			default: // Fallback: NoMBC (some games may not run).
 				m_mbc = std::make_unique<NoMBC>(m_romData);
