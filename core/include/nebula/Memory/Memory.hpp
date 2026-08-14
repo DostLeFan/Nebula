@@ -6,13 +6,14 @@
 #include <array>
 #include <cstdint>
 #include "../Cartridge/Cartridge.hpp"
+#include "../Scheduler/Scheduler.hpp"
 
 namespace nebula
 {
 	class Memory
 	{
 		public:
-			explicit Memory(Cartridge& cartridge);
+			explicit Memory(Cartridge& cartridge, Scheduler& scheduler);
 			~Memory() = default;
 			
 			// Generic 16-bit bus access (used by the CPU).
@@ -30,9 +31,13 @@ namespace nebula
 			// Called by the PPU to lock/unlock VRAM and OAM depending on its current mode (mode 2/3).
 			inline void setVRAMAccessible(bool accessible) { m_vramAccessible = accessible; }
 			inline void setOAMAccessible(bool accessible) { m_oamAccessible = accessible; }
+			
+			// For tests / debugging
+			bool isDMAActive() const { return m_dmaActive; }
 		
 		private:
 			Cartridge& m_cartridge;
+			Scheduler& m_scheduler;
 			
 			// Internal memory regions.
 			std::array<uint8_t, 0x2000> m_wramBank0; // 0xC000-0xCFFF (4 KB).
@@ -46,6 +51,10 @@ namespace nebula
 			// PPU access restrictions.
 			bool m_vramAccessible = true;
 			bool m_oamAccessible = true;
+			
+			// DMA state.
+			bool m_dmaActive = false;
+			Scheduler::EventId m_dmaEventId = 0;
 			
 			// Internal helpers for I/O.
 			uint8_t readIO(uint16_t addr) const;
