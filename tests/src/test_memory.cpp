@@ -26,8 +26,9 @@ static Cartridge makeMBC1WithRAM()
 
 TEST_CASE("Memory - construction and power-up I/O values", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	// Key power-up values (DMG, from Pan Docs).
 	REQUIRE(mem.read(0xFF00) == 0xCF); // P1.
@@ -65,8 +66,9 @@ TEST_CASE("Memory - construction and power-up I/O values", "[memory]")
 
 TEST_CASE("Memory - ROM read (0x0000-0x7FFF)", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	REQUIRE(mem.read(0x0100) == 0xC3); // Entry point from helper.
 	REQUIRE(mem.read(0x0150) == 0x50); // Pattern.
@@ -76,8 +78,9 @@ TEST_CASE("Memory - ROM read (0x0000-0x7FFF)", "[memory]")
 
 TEST_CASE("Memory - ROM write is intercepted by MBC", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	uint8_t original = mem.read(0x0000);
 	mem.write(0x0000, 0xAA);
@@ -88,8 +91,9 @@ TEST_CASE("Memory - ROM write is intercepted by MBC", "[memory]")
 
 TEST_CASE("Memory - VRAM read/write when accessible", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	mem.setVRAMAccessible(true);
 	
@@ -106,8 +110,9 @@ TEST_CASE("Memory - VRAM read/write when accessible", "[memory]")
 
 TEST_CASE("Memory - VRAM blocked returns 0xFF and ignores writes", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	mem.setVRAMAccessible(true);
 	mem.write(0x8000, 0x55);
@@ -123,8 +128,9 @@ TEST_CASE("Memory - VRAM blocked returns 0xFF and ignores writes", "[memory]")
 
 TEST_CASE("Memory - External RAM when present", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeMBC1WithRAM();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	// MBC1 needs RAM enabled (write 0x0A to 0x0000-0x1FFF).
 	mem.write(0x0000, 0x0A);
@@ -138,8 +144,9 @@ TEST_CASE("Memory - External RAM when present", "[memory]")
 
 TEST_CASE("Memory - External RAM returns 0xFF when disabled / absent", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge(); // No RAM.
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	REQUIRE(mem.read(0xA000) == 0xFF);
 	REQUIRE(mem.read(0xBFFF) == 0xFF);
@@ -150,8 +157,9 @@ TEST_CASE("Memory - External RAM returns 0xFF when disabled / absent", "[memory]
 
 TEST_CASE("Memory - WRAM bank 0 and bank 1", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	mem.write(0xC000, 0x11);
 	mem.write(0xCFFF, 0x22);
@@ -166,8 +174,9 @@ TEST_CASE("Memory - WRAM bank 0 and bank 1", "[memory]")
 
 TEST_CASE("Memory - Echo RAM mirrors WRAM", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	// Write via normal WRAM -> appears in Echo.
 	mem.write(0xC000, 0xAA);
@@ -190,8 +199,9 @@ TEST_CASE("Memory - Echo RAM mirrors WRAM", "[memory]")
 
 TEST_CASE("Memory - OAM read/write when accessible", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	mem.setOAMAccessible(true);
 	
@@ -207,8 +217,9 @@ TEST_CASE("Memory - OAM read/write when accessible", "[memory]")
 
 TEST_CASE("Memory - OAM blocked returns 0xFF and ignores writes", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	mem.setOAMAccessible(true);
 	mem.write(0xFE00, 0x77);
@@ -224,8 +235,9 @@ TEST_CASE("Memory - OAM blocked returns 0xFF and ignores writes", "[memory]")
 
 TEST_CASE("Memory - Unusable zone returns 0x00 and ignores writes", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	REQUIRE(mem.read(0xFEA0) == 0x00);
 	REQUIRE(mem.read(0xFEFF) == 0x00);
@@ -239,8 +251,9 @@ TEST_CASE("Memory - Unusable zone returns 0x00 and ignores writes", "[memory]")
 
 TEST_CASE("Memory - HRAM read/write", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	mem.write(0xFF80, 0xAB);
 	mem.write(0xFFFE, 0xCD);
@@ -251,8 +264,9 @@ TEST_CASE("Memory - HRAM read/write", "[memory]")
 
 TEST_CASE("Memory - IE register", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	REQUIRE(mem.read(0xFFFF) == 0x00);
 	
@@ -263,8 +277,9 @@ TEST_CASE("Memory - IE register", "[memory]")
 
 TEST_CASE("Memory - DIV write resets it to 0", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	REQUIRE(mem.read(0xFF04) == 0xAB); // Power-up.
 	
@@ -274,8 +289,9 @@ TEST_CASE("Memory - DIV write resets it to 0", "[memory]")
 
 TEST_CASE("Memory - LY is read-only", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	REQUIRE(mem.read(0xFF44) == 0x00);
 	
@@ -283,47 +299,60 @@ TEST_CASE("Memory - LY is read-only", "[memory]")
 	REQUIRE(mem.read(0xFF44) == 0x00); // Unchanged.
 }
 
-TEST_CASE("Memory - DMA transfer (instantaneous)", "[memory]")
+TEST_CASE("Memory - DMA transfer (instantaneous copy + bus lock)", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
-	// Put a known pattern in HRAM (source will be 0xFF00 -> actually we use WRAM).
-	// DMA source = value << 8, so 0xC0 -> source 0xC000.
+	// Source pattern in WRAM.
 	for(uint16_t i=0;i<0xA0;++i)
-		mem.write((0xC000 + i), static_cast<uint8_t>((0xA0 + i)));
+		mem.write(0xC000 + i, static_cast<uint8_t>(0xA0 + i));
 	
-	mem.write(0xFF46, 0xC0); // Start DMA from 0xC000.
+	mem.write(0xFF46, 0xC0); // Starts the DMA.
+	
+	REQUIRE(mem.isDMAActive());
+	REQUIRE(mem.read(0xFE00) == 0xFF);
 	
 	for(uint16_t i=0;i<0xA0;++i)
-		REQUIRE(mem.read((0xFE00 + i)) == static_cast<uint8_t>((0xA0 + i)));
+		REQUIRE(mem.readOAM(0xFE00 + i) == static_cast<uint8_t>(0xA0 + i));
 	
-	// DMA register keeps the written value.
+	sched.tick(160 * Scheduler::MCycle);
+	REQUIRE_FALSE(mem.isDMAActive());
+	
+	for(uint16_t i=0;i<0xA0;++i)
+		REQUIRE(mem.read(0xFE00 + i) == static_cast<uint8_t>(0xA0 + i));
+	
 	REQUIRE(mem.read(0xFF46) == 0xC0);
 }
 
 TEST_CASE("Memory - DMA works even when OAM is blocked", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	for(uint16_t i=0;i<0xA0;++i)
-		mem.write((0xC000 + i), static_cast<uint8_t>(i));
+		mem.write(0xC000 + i, static_cast<uint8_t>(i));
 	
 	mem.setOAMAccessible(false);
 	mem.write(0xFF46, 0xC0);
 	
-	// DMA writes directly, so OAM is updated.
+	for(uint16_t i=0;i<0xA0;++i)
+		REQUIRE(mem.readOAM(0xFE00 + i) == static_cast<uint8_t>(i));
+	
+	sched.tick(160 * Scheduler::MCycle);
 	mem.setOAMAccessible(true);
 	
 	for(uint16_t i=0;i<0xA0;++i)
-		REQUIRE(mem.read((0xFE00 + i)) == static_cast<uint8_t>(i));
+		REQUIRE(mem.read(0xFE00 + i) == static_cast<uint8_t>(i));
 }
 
 TEST_CASE("Memory - region boundaries", "[memory]")
 {
+	Scheduler sched;
 	Cartridge cart = makeNoMBCCartridge();
-	Memory mem(cart);
+	Memory mem(cart, sched);
 	
 	// Just before / after each major boundary.
 	mem.write(0x7FFF, 0x11); // Last ROM byte (write ignored by NoMBC).
@@ -361,4 +390,58 @@ TEST_CASE("Memory - region boundaries", "[memory]")
 	REQUIRE(mem.read(0xFE9F) == 0xDD);
 	REQUIRE(mem.read(0xFF80) == 0xEE);
 	REQUIRE(mem.read(0xFFFE) == 0xFF);
+}
+
+TEST_CASE("Memory - DMA is active for 160 M-cycles", "[memory]")
+{
+	Scheduler sched;
+	Cartridge cart = makeNoMBCCartridge();
+	Memory mem(cart, sched);
+	
+	// Fill a source.
+	for(uint16_t i=0;i<0xA0;++i)
+		mem.write(0xC000 + i, static_cast<uint8_t>(i));
+	
+	REQUIRE_FALSE(mem.isDMAActive());
+	
+	mem.write(0xFF46, 0xC0); // démarre le DMA
+	
+	REQUIRE(mem.isDMAActive());
+	
+	// During DMA, outside of HRAM -> 0xFF.
+	REQUIRE(mem.read(0xC000) == 0xFF);
+	REQUIRE(mem.read(0xFE00) == 0xFF);
+	
+	// HRAM remains accessible.
+	mem.write(0xFF80, 0xAB);
+	REQUIRE(mem.read(0xFF80) == 0xAB);
+	
+	// Advance by 639 T-cycles -> still active.
+	sched.tick(160 * Scheduler::MCycle - 1);
+	REQUIRE(mem.isDMAActive());
+	
+	// The last cycle -> DMA completed.
+	sched.tick(1);
+	REQUIRE_FALSE(mem.isDMAActive());
+	
+	// OAM does indeed contain the data.
+	for(uint16_t i=0;i<0xA0;++i)
+		REQUIRE(mem.read(0xFE00 + i) == static_cast<uint8_t>(i));
+}
+
+TEST_CASE("Memory - DMA can be restarted", "[memory]")
+{
+	Scheduler sched;
+	Cartridge cart = makeNoMBCCartridge();
+	Memory mem(cart, sched);
+	
+	mem.write(0xFF46, 0xC0);
+	REQUIRE(mem.isDMAActive());
+	
+	// Restart before the end.
+	mem.write(0xFF46, 0xC0);
+	REQUIRE(mem.isDMAActive());
+	
+	sched.tick(160 * Scheduler::MCycle);
+	REQUIRE_FALSE(mem.isDMAActive());
 }

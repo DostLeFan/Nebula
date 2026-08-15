@@ -2,7 +2,7 @@
 
 namespace nebula
 {
-	Memory::Memory(Cartridge& cartridge) : m_cartridge(cartridge)
+	Memory::Memory(Cartridge& cartridge, Scheduler& scheduler) : m_cartridge(cartridge), m_scheduler(scheduler)
 	{
 		m_wramBank0.fill(0);
 		m_wramBank1.fill(0);
@@ -18,6 +18,10 @@ namespace nebula
 	// Generic 16-bit bus access (used by the CPU).
 	uint8_t Memory::read(uint16_t addr) const
 	{
+		// During a DMA transfer, only HRAM is accessible to the CPU.
+		if(m_dmaActive && !(addr >= 0xFF80 && addr <= 0xFFFE))
+			return 0xFF;
+		
 		if(addr < 0x8000) // ROM (0x0000-0x7FFF).
 			return m_cartridge.read(addr);
 		else if(addr < 0xA000) // VRAM (0x8000-0x9FFF).
@@ -44,6 +48,10 @@ namespace nebula
 	
 	void Memory::write(uint16_t addr, uint8_t value)
 	{
+		// During a DMA transfer, only HRAM is accessible.
+		if(m_dmaActive && !(addr >= 0xFF80 && addr <= 0xFFFE))
+			return;
+		
 		if(addr < 0x8000) // ROM zone : writing intercepted by the MBC (bank switching, etc.).
 			m_cartridge.write(addr, value);
 		else if(addr < 0xA000) // VRAM.
@@ -123,6 +131,20 @@ namespace nebula
 					m_oam[i] = read(static_cast<uint16_t>((source + i))); // Bypasses m_oamAccessible : the DMA controller writes OAM directly.
 				
 				m_io[(addr - 0xFF00)] = value;
+				
+				// Cancels any previous DMA.
+				if(m_dmaActive)
+					m_scheduler.cancel(m_dmaEventId);
+				
+				m_dmaActive = true;
+				
+				// DMA ends in 160 M-cycles = 640 T-cycles.
+				m_dmaEventId = m_scheduler.schedule(
+					160 * Scheduler::MCycle,
+					[this]() {
+						m_dmaActive = false;
+					}
+				);
 			}
 			break;
 			
