@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Memory
 - Unit tests
 - Scheduler, for cyles
+- More CI for more development cases
 
 ## [0.0.0] - 2026-07-05
 
