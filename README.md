@@ -83,6 +83,8 @@ In the meantime, the unit tests in the `tests/` directory are the best reference
 
 ## Using the Node.js bindings
 
+Node.js binding isn't really implemented. So... It is not really usable.
+
 ```bash
 npm install nebula
 ```
