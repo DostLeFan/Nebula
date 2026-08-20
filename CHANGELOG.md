@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - More CI for more development cases
 - Added a CONTRIBUTING.md file
 - Added a CODE_OF_CONDUCT.md file
+- Added a SECURITY.md file
 
 ## [0.0.0] - 2026-07-05
 
