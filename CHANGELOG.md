@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.1] - 2026-08-20
+
 ### Added
 
 - MBC base class
@@ -28,5 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - release.yml to compile on Windows, Linux and MacOS
 - Base (real base)
 
-[unreleased]: https://github.com/DostLeFan/Nebula/compare/v0.0.0...HEAD
+[unreleased]: https://github.com/DostLeFan/Nebula/compare/v0.0.1...HEAD
+[0.0.1]: https://github.com/DostLeFan/Nebula/compare/v0.0.0...v0.0.1
 [v0.0.0]: https://github.com/DostLeFan/Nebula/releases/tag/v0.0.0
