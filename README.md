@@ -7,6 +7,7 @@
 [![CMake](https://img.shields.io/badge/CMake-3.25+-blue.svg)](https://cmake.org/)
 [![Tests (Push)](https://github.com/DostLeFan/Nebula/actions/workflows/tests-push.yml/badge.svg)](https://github.com/DostLeFan/Nebula/actions/workflows/tests-push.yml)
 [![Tests (Release)](https://github.com/DostLeFan/Nebula/actions/workflows/tests-release.yml/badge.svg)](https://github.com/DostLeFan/Nebula/actions/workflows/tests-release.yml)
+[<image-card alt="Discord" src="https://img.shields.io/discord/1538441690350751788?color=7289DA&label=Discord&logo=discord&logoColor=white" ></image-card>](https://discord.gg/BfX67ruws5)
 
 **Nebula** (*Nintendo Emulation Bridge for Universal Logic Architecture*) is a modern, cross-platform Game Boy / Game Boy Color emulator written in pure C++17.
 
