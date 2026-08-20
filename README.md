@@ -88,13 +88,13 @@ In the meantime, the unit tests in the `tests/` directory are the best reference
 Node.js binding isn't really implemented. So... It is not really usable.
 
 ```bash
-npm install nebula
+npm install nebula-gb
 ```
 
 Prebuilt binaries are provided for the most common platforms (Windows x64, Linux x64/ARM64, macOS x64/ARM64). No compilation required in most cases.
 
 ```js
-const nebula = require("nebula");
+const nebula = require("nebula-gb");
 
 // API still under construction
 ```

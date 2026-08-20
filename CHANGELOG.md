@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.8] - 2026-08-20
+
+### Fixed
+
+- Changed NodeJS module from "nebula" to "nebula-gb" to avoid name conflicts with an existing NodeJS module on NPM
+
 ## [0.0.7] - 2026-08-20
 
 ### Fixed
@@ -66,7 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - release.yml to compile on Windows, Linux and MacOS
 - Base (real base)
 
-[unreleased]: https://github.com/DostLeFan/Nebula/compare/v0.0.7...HEAD
+[unreleased]: https://github.com/DostLeFan/Nebula/compare/v0.0.8...HEAD
+[0.0.8]: https://github.com/DostLeFan/Nebula/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/DostLeFan/Nebula/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/DostLeFan/Nebula/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/DostLeFan/Nebula/compare/v0.0.4...v0.0.5

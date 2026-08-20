@@ -5,7 +5,7 @@ Node.js bindings for Nebula.
 ## Installation
 
 ```bash
-npm install nebula
+npm install nebula-gb
 ```
 
 No compilation is required.
@@ -21,7 +21,7 @@ Prebuilt binaries are provided for:
 ## Usage
 
 ```js
-const parser = require("nebula");
+const nebula = require("nebula-gb");
 
 // TODO.
 ```
