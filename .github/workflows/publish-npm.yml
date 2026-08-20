@@ -51,6 +51,9 @@ jobs:
 
       - name: Configure
         run: cmake --preset release -DNEBULA_BUILD_NODE=ON
+        
+      - name: Build Core Library
+        run: cmake --build build/release --config Release --target nebula-core
 
       - name: Build
         run: cmake --build --preset release --config Release

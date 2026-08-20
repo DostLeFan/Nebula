@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-08-20
+
+### Fixed
+
+- Another problem in NPM building and publishing
+
 ## [0.0.2] - 2026-08-20
 
 ### Fixed
@@ -36,7 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - release.yml to compile on Windows, Linux and MacOS
 - Base (real base)
 
-[unreleased]: https://github.com/DostLeFan/Nebula/compare/v0.0.2...HEAD
+[unreleased]: https://github.com/DostLeFan/Nebula/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/DostLeFan/Nebula/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/DostLeFan/Nebula/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/DostLeFan/Nebula/compare/v0.0.0...v0.0.1
 [v0.0.0]: https://github.com/DostLeFan/Nebula/releases/tag/v0.0.0
