@@ -7,7 +7,7 @@
 [![CMake](https://img.shields.io/badge/CMake-3.25+-blue.svg)](https://cmake.org/)
 [![Tests (Push)](https://github.com/DostLeFan/Nebula/actions/workflows/tests-push.yml/badge.svg)](https://github.com/DostLeFan/Nebula/actions/workflows/tests-push.yml)
 [![Tests (Release)](https://github.com/DostLeFan/Nebula/actions/workflows/tests-release.yml/badge.svg)](https://github.com/DostLeFan/Nebula/actions/workflows/tests-release.yml)
-[<image-card alt="Discord" src="https://img.shields.io/discord/1538441690350751788?color=7289DA&label=Discord&logo=discord&logoColor=white" ></image-card>](https://discord.gg/BfX67ruws5)
+[![Discord](https://img.shields.io/discord/1538441690350751788?color=7289DA&label=Discord&logo=discord&logoColor=white)](https://discord.gg/BfX67ruws5)
 
 **Nebula** (*Nintendo Emulation Bridge for Universal Logic Architecture*) is a modern, cross-platform Game Boy / Game Boy Color emulator written in pure C++17.
 
@@ -31,6 +31,7 @@ A ready-to-use emulator frontend will also be provided.
 * [Project Status & Roadmap](#project-status--roadmap)
 * [Contributing](#contributing)
 * [License](#license)
+* [Community](#community)
 
 ---
 
@@ -161,3 +162,7 @@ Please read CONTRIBUTING.md for guidelines (coding style, testing, pull request 
 This project is released under the **MIT License**.
 
 See LICENSE for the full text.
+
+# Community
+
+We have a Discord server, associated to the project, that [you can join here](https://discord.gg/BfX67ruws5).
