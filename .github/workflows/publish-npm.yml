@@ -56,13 +56,14 @@ jobs:
         run: cmake --build build/release --config Release --target nebula-core
 
       - name: Build Node Binding
-        run: cmake --build --preset release --config Release --target nebula
+        run: cmake --build --preset release --config Release --target build_node_binding
 
       - name: Upload Prebuilt
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform }}-${{ matrix.arch }}
           path: build/release/prebuilds/nebula.node
+          if-no-files-found: error
 
   publish:
     needs: build
