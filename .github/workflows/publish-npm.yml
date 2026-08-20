@@ -117,6 +117,10 @@ jobs:
           name: darwin-arm64
           path: bindings/node/prebuilds/darwin-arm64
 
+      - name: Set package version from tag
+        working-directory: bindings/node
+        run: npm version --no-git-tag-version --allow-same-version "${GITHUB_REF_NAME#v}"
+
       - name: Publish
         working-directory: bindings/node
         run: npm publish
