@@ -27,15 +27,15 @@ static inline std::vector<uint8_t> createROMWithBankPattern(size_t size)
 	return rom;
 }
 
-// Backdates the "last update" timestamp embedded in a MBC3::saveState()
-// buffer by `seconds`, so that the next RTC access sees that much elapsed
-// real time. This is how we simulate real-time passing (e.g. a save being
-// reloaded after the console was off) without actually sleeping in a test.
-// Layout written by MBC3::saveState(): flags(1) + romBank(1) + ramBank(1)
-// + rtcReg(1) + RTC(5) + RTCLatched(5) + lastUpdate seconds (8, native int64_t).
+/*
+	Backdates the wall-clock reference embedded in a MBC3::saveState() buffer by `seconds`, so that the next catchUpRealTime() call sees that much elapsed
+	real time. This is how we simulate real-time passing (e.g. a save being reloaded after the console was off) without actually sleeping in a test.
+	Layout written by MBC3::saveState(): flags(1) + romBank(1) + ramBank(1) + rtcReg(1) + RTC(5) + RTCLatched(5) + cycleAccumulator(8, uint64_t)
+	+ wallSeconds (8, fixed-width int64_t).
+*/
 static inline std::string backdateRTCState(std::string state, int64_t seconds)
 {
-	constexpr size_t offset = 1 + 1 + 1 + 1 + 5 + 5;
+	constexpr size_t offset = 1 + 1 + 1 + 1 + 5 + 5 + 8;
 	int64_t ts = 0;
 	
 	std::memcpy(&ts, state.data() + offset, sizeof(ts));

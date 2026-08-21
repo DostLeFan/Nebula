@@ -35,6 +35,17 @@ namespace nebula
 			virtual void loadState(std::istream& is) override;
 			
 			virtual void tick(uint64_t cycles) override;
+			
+			/*
+				Applies real (wall-clock) time elapsed since the last call, in a single
+				O(1) step. Meant to be called once per "cold" transition -- typically
+				right after loadState() when resuming a session, or when a battery-backed
+				cartridge is first loaded -- NOT on every emulated step.
+				Ongoing time while the emulator is actively running is instead driven
+				deterministically by tick(), based on emulated T-cycles ; this is what
+				keeps fast-forward, rewind and save-states consistent (see tick()).
+			*/
+			virtual void catchUpRealTime() override;																																																																	
 		
 		private:
 			std::vector<uint8_t> const& m_romData;
@@ -61,10 +72,33 @@ namespace nebula
 			RTC m_rtcLatched; // Latched values (after latch sequence).
 			bool m_latched; // True if RTC is latched.
 			bool m_latchPending; // True if 0x00 has been written, waiting for 0x01 to latch.
-			std::chrono::steady_clock::time_point m_lastUpdate; // Last time RTC was updated.
+			
+			/*
+				Sharp LR35902 base clock (T-cycles/sec, DMG single-speed). The MBC3 RTC
+				crystal is physically independent from the CPU and never runs at CGB
+				double speed, so tick() must always be fed base-speed T-cycles.
+			*/
+			static constexpr uint64_t CPU_FREQ_HZ = 4194304;
+			
+			/*
+				T-cycles accumulated since the last whole RTC second was applied.
+				Deterministic, save-stated as-is : drives tick() so that the RTC only
+				ever advances in lockstep with emulated time (immune to host machine
+				speed, safe to snapshot/restore for rewind).
+			*/
+			uint64_t m_cycleAccumulator;
+			
+			/*
+				Wall-clock reference used only by catchUpRealTime(), to account for real
+				time elapsed while the emulator process wasn't running at all. Uses
+				system_clock (not steady_clock) because, unlike m_cycleAccumulator, it
+				must remain meaningful across process restarts and across machines.
+			*/
+			std::chrono::system_clock::time_point m_lastRealTime;
 			
 			// Real-time clock helpers.
-			void updateRTC(); // Called periodically to increment counters.
+			void incrementOneSecond(); // +1s carry (seconds->minutes->hours->days). Cheap, called at most once per emulated second by tick().
+			void applyElapsedSeconds(uint64_t secondsElapsed); // Bulk O(1) carry for potentially large gaps (days/weeks), used by catchUpRealTime().
 			void latchRTC(); // Copy current RTC to latched values.
 			
 			// Internal methods.

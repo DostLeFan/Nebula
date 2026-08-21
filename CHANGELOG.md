@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- MBC3's RTC is now driven by emulated T-cycles instead of wall-clock time, with real time elapsed while the emulator wasn't running applied separately via a new explicit `catchUpRealTime()` (added to the `MBC` base interface), making it safe for fast-forward, rewind and portable save states
+
 ## [0.0.8] - 2026-08-20
 
 ### Fixed

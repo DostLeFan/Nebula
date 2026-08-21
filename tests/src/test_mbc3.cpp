@@ -126,16 +126,14 @@ TEST_CASE("MBC3 - writeROM RTC mode selection", "[mbc3]")
 	for(uint8_t reg=0x08;reg<=0x0C;++reg)
 	{
 		mbc.writeROM(0x4000, reg);
-		// m_rtcMode should be true, m_ramBank should be (reg & 0x03).
-		// We'll verify by writing to RTC registers in read/write RAM tests.
+		// m_rtcMode should be true, m_ramBank should be (reg & 0x03). We'll verify by writing to RTC registers in read/write RAM tests.
 	}
 	
 	// Test RAM bank values (0x00-0x03).
 	for(uint8_t bank=0x00;bank<=0x03;++bank)
 		mbc.writeROM(0x4000, bank); // m_rtcMode should be false, m_ramBank should be bank.
 	
-	// Test values outside ranges (0x04-0x07, 0x0D-0xFF).
-	// They should be treated as RAM mode with m_ramBank = value & 0x03.
+	// Test values outside ranges (0x04-0x07, 0x0D-0xFF). They should be treated as RAM mode with m_ramBank = value & 0x03.
 	mbc.writeROM(0x4000, 0x07);
 	// m_ramBank = 0x03, m_rtcMode = false.
 }
@@ -293,11 +291,11 @@ TEST_CASE("MBC3 - RAM beyond size returns 0xFF", "[mbc3]")
 	mbc.writeRAM(0xA000, 0x42);
 	REQUIRE(mbc.readRAM(0xA000) == 0x42);
 	
-	// Beyond RAM size (0xA000 + 0x2000 = 0xC000, so 0xBFFF is last valid byte).
-	// 0xC000 is not in RAM range (0xA000-0xBFFF), so read returns 0xFF.
-	// Actually, addr 0xC000 is not in the RAM range, so read returns 0xFF.
-	// But what about addr 0xBFFF? Should be valid.
-	// Let's test 0xC000 which is outside the range.
+	/*
+		Beyond RAM size (0xA000 + 0x2000 = 0xC000, so 0xBFFF is last valid byte). 0xC000 is not in RAM range (0xA000-0xBFFF), so read returns 0xFF.
+		Actually, addr 0xC000 is not in the RAM range, so read returns 0xFF. But what about addr 0xBFFF? Should be valid.
+		Let's test 0xC000 which is outside the range.
+	*/
 	REQUIRE(mbc.readRAM(0xC000) == 0xFF);
 	// Also test 0x9FFF (below RAM range).
 	REQUIRE(mbc.readRAM(0x9FFF) == 0xFF);
@@ -341,9 +339,7 @@ TEST_CASE("MBC3 - RTC read/write all registers", "[mbc3]")
 
 TEST_CASE("MBC3 - RTC register writes are stored raw (no instant clamping)", "[mbc3]")
 {
-	// On real hardware, writing to a RTC register just stores the raw byte:
-	// there is no immediate wrap/clamp. An "invalid" value (e.g. 60 seconds)
-	// only gets corrected once real time actually elapses.
+	// On real hardware, writing to a RTC register just stores the raw byte: there is no immediate wrap/clamp. An "invalid" value (e.g. 60 seconds) only gets corrected once real time actually elapses.
 	std::vector<uint8_t> rom = createROMWithBankPattern(0x8000);
 	std::vector<uint8_t> ram(0x2000, 0x00);
 	MBC3 mbc(rom, ram);
@@ -363,19 +359,19 @@ TEST_CASE("MBC3 - RTC register writes are stored raw (no instant clamping)", "[m
 	REQUIRE(mbc.readRAM(0xA000) == 24);
 }
 
-TEST_CASE("MBC3 - RTC wraps correctly once real time elapses", "[mbc3]")
+TEST_CASE("MBC3 - RTC wraps correctly once real time elapses (cold catch-up)", "[mbc3]")
 {
-	// Seconds/minutes/hours only get normalized when real time actually
-	// passes (via updateRTC()), which we simulate by backdating the internal
-	// "last update" timestamp through a save/load round-trip.
+	/*
+		Seconds/minutes/hours only get normalized once time actually elapses. Here we simulate the "console was off" case: real time passed while the
+		emulator wasn't running, so it's caught up in one shot via catchUpRealTime() -- not via tick(), which only tracks emulated cycles.
+	*/
 	std::vector<uint8_t> rom = createROMWithBankPattern(0x8000);
 	std::vector<uint8_t> ram(0x2000, 0x00);
 	MBC3 mbc(rom, ram);
 	
 	mbc.writeROM(0x0000, 0x0A);
 	
-	// Explicitly pin every field: the constructor seeds seconds/minutes/hours
-	// from the host's wall-clock time, so we must not rely on their defaults.
+	// Explicitly pin every field: the constructor seeds seconds/minutes/hours from the host's wall-clock time, so we must not rely on their defaults.
 	mbc.writeROM(0x4000, 0x08);
 	mbc.writeRAM(0xA000, 59); // Seconds = 59.
 	mbc.writeROM(0x4000, 0x09);
@@ -383,22 +379,114 @@ TEST_CASE("MBC3 - RTC wraps correctly once real time elapses", "[mbc3]")
 	mbc.writeROM(0x4000, 0x0A);
 	mbc.writeRAM(0xA000, 0); // Hours = 0.
 	
-	// Simulate 1 real second elapsing.
+	// Simulate 1 real second elapsing while the emulator was closed.
 	std::ostringstream oss(std::ios::binary);
 	mbc.saveState(oss);
 	std::istringstream iss(backdateRTCState(oss.str(), 1), std::ios::binary);
 	mbc.loadState(iss);
 	
-	// On real hardware the RTC crystal counts continuously; in this emulator
-	// that's reflected by the CPU main loop calling tick() every cycle, which
-	// applies elapsed real time via updateRTC(). We call it explicitly here.
-	mbc.tick(0);
+	// loadState() itself is a pure, deterministic restore (safe for rewind/rollback). Catching up real time is a separate, explicit step, meant to be called once when a session actually resumes.
+	mbc.catchUpRealTime();
 	
 	// seconds 59 + 1s = 60 -> wraps to 0, minutes carries to 1.
 	mbc.writeROM(0x4000, 0x08);
 	REQUIRE(mbc.readRAM(0xA000) == 0);
 	mbc.writeROM(0x4000, 0x09);
 	REQUIRE(mbc.readRAM(0xA000) == 1);
+}
+
+TEST_CASE("MBC3 - RTC wraps correctly from emulated cycles (in-session)", "[mbc3]")
+{
+	// Unlike the cold catch-up above, this is the "game is actively running" path: tick() must advance the RTC purely from T-cycles, with no dependency whatsoever on wall-clock time.
+	std::vector<uint8_t> rom = createROMWithBankPattern(0x8000);
+	std::vector<uint8_t> ram(0x2000, 0x00);
+	MBC3 mbc(rom, ram);
+	
+	mbc.writeROM(0x0000, 0x0A);
+	
+	mbc.writeROM(0x4000, 0x08);
+	mbc.writeRAM(0xA000, 59); // Seconds = 59.
+	mbc.writeROM(0x4000, 0x09);
+	mbc.writeRAM(0xA000, 0); // Minutes = 0.
+	
+	// Feed exactly one second's worth of T-cycles at the DMG base clock (4194304 Hz). One call short of that must NOT roll over yet.
+	mbc.tick(4194304 - 1);
+	mbc.writeROM(0x4000, 0x08);
+	REQUIRE(mbc.readRAM(0xA000) == 59);
+	
+	mbc.tick(1); // The final cycle crosses the 1-second threshold.
+	mbc.writeROM(0x4000, 0x08);
+	REQUIRE(mbc.readRAM(0xA000) == 0);
+	mbc.writeROM(0x4000, 0x09);
+	REQUIRE(mbc.readRAM(0xA000) == 1);
+}
+
+TEST_CASE("MBC3 - tick() advancement is independent of host speed (fast-forward safe)", "[mbc3]")
+{
+	// Feeding N seconds' worth of cycles in one call must advance the RTC by exactly N seconds, whether that call happens "instantly" (fast-forward) or is spread over many small ticks - no wall-clock is involved.
+	std::vector<uint8_t> rom = createROMWithBankPattern(0x8000);
+	std::vector<uint8_t> ram(0x2000, 0x00);
+	MBC3 mbc(rom, ram);
+	
+	mbc.writeROM(0x0000, 0x0A);
+	
+	// Explicitly pin both fields: the constructor seeds them from the host's wall-clock time, so we must not rely on their defaults.
+	mbc.writeROM(0x4000, 0x08);
+	mbc.writeRAM(0xA000, 0); // Seconds = 0.
+	mbc.writeROM(0x4000, 0x09);
+	mbc.writeRAM(0xA000, 0); // Minutes = 0.
+	
+	mbc.tick(4194304ULL * 90); // 90 seconds in a single burst.
+	
+	mbc.writeROM(0x4000, 0x08);
+	REQUIRE(mbc.readRAM(0xA000) == 30); // 90 % 60.
+	mbc.writeROM(0x4000, 0x09);
+	REQUIRE(mbc.readRAM(0xA000) == 1); // 90 / 60.
+}
+
+TEST_CASE("MBC3 - save/load state round-trip preserves cycle accumulator (rollback safe)", "[mbc3]")
+{
+	/*
+		A rewind/rollback implementation snapshots and restores state repeatedly, potentially many times per second, and must never touch the
+		wall clock. This checks that loadState() alone (no catchUpRealTime()) reproduces identical behavior to the pre-save state.
+	*/
+	std::vector<uint8_t> rom = createROMWithBankPattern(0x8000);
+	std::vector<uint8_t> ram(0x2000, 0x00);
+	MBC3 mbc(rom, ram);
+	
+	mbc.writeROM(0x0000, 0x0A);
+	mbc.writeROM(0x4000, 0x08);
+	mbc.writeRAM(0xA000, 59);
+	
+	// Partial second accumulated, not yet rolled over.
+	mbc.tick(4194304 / 2);
+	
+	std::ostringstream oss(std::ios::binary);
+	mbc.saveState(oss);
+	
+	std::vector<uint8_t> rom2 = createROMWithBankPattern(0x8000);
+	std::vector<uint8_t> ram2(0x2000, 0x00);
+	MBC3 mbc2(rom2, ram2);
+	std::istringstream iss(oss.str(), std::ios::binary);
+	mbc2.loadState(iss);
+	
+	// Neither instance should roll over yet (only half a second accumulated).
+	mbc.tick(4194304 / 2 - 1);
+	mbc2.tick(4194304 / 2 - 1);
+	
+	mbc.writeROM(0x4000, 0x08);
+	mbc2.writeROM(0x4000, 0x08);
+	REQUIRE(mbc.readRAM(0xA000) == 59);
+	REQUIRE(mbc2.readRAM(0xA000) == 59);
+	
+	// The remaining single cycle rolls both over identically.
+	mbc.tick(1);
+	mbc2.tick(1);
+	
+	mbc.writeROM(0x4000, 0x08);
+	mbc2.writeROM(0x4000, 0x08);
+	REQUIRE(mbc.readRAM(0xA000) == 0);
+	REQUIRE(mbc2.readRAM(0xA000) == 0);
 }
 
 TEST_CASE("MBC3 - RTC days and carry flag", "[mbc3]")
@@ -421,8 +509,8 @@ TEST_CASE("MBC3 - RTC days and carry flag", "[mbc3]")
 	std::istringstream iss(backdateRTCState(oss.str(), 86400), std::ios::binary);
 	mbc.loadState(iss);
 	
-	// Apply the elapsed time the way the emulator's CPU loop would (tick()).
-	mbc.tick(0);
+	// Apply the elapsed time the way the emulator would when a session resumes (cold catch-up, not the in-session cycle-driven tick()).
+	mbc.catchUpRealTime();
 	
 	// day 511 + 1 = 512 -> wraps to 0, carry flag set (bit 7).
 	mbc.writeROM(0x4000, 0x0B);
@@ -507,10 +595,10 @@ TEST_CASE("MBC3 - RTC latch requires exact 0x00 then 0x01 order", "[mbc3]")
 
 TEST_CASE("MBC3 - save/load state with RAM", "[mbc3]")
 {
-	// Like MBC1, MBC3::saveState/loadState only cover the MBC's own
-	// registers ; external RAM is owned and (de)serialized separately by
-	// Cartridge. So after loadState() the RAM content is NOT expected to be
-	// restored -- only the registers (RAM bank, enable flag, ROM bank...) are.
+	/*
+		Like MBC1, MBC3::saveState/loadState only cover the MBC's own registers ; external RAM is owned and (de)serialized separately by
+		Cartridge. So after loadState() the RAM content is NOT expected to be restored - only the registers (RAM bank, enable flag, ROM bank...) are.
+	*/
 	std::vector<uint8_t> rom = createROMWithBankPattern(0x8000);
 	std::vector<uint8_t> ram(0x8000, 0x00); // 4 banks (32 KB).
 	MBC3 mbc(rom, ram);
@@ -535,8 +623,7 @@ TEST_CASE("MBC3 - save/load state with RAM", "[mbc3]")
 	std::istringstream iss(oss.str());
 	mbc2.loadState(iss);
 	
-	// The RAM enable / RAM bank registers should be restored: writing a new
-	// value confirms bank 1 is still selected and RAM is still enabled.
+	// The RAM enable / RAM bank registers should be restored: writing a new value confirms bank 1 is still selected and RAM is still enabled.
 	mbc2.writeRAM(0xA000, 0x7F);
 	REQUIRE(mbc2.readRAM(0xA000) == 0x7F);
 	
@@ -618,10 +705,10 @@ TEST_CASE("MBC3 - save/load state with disabled RAM", "[mbc3]")
 
 TEST_CASE("MBC3 - save/load state with multiple RAM banks", "[mbc3]")
 {
-	// Same reasoning as above: MBC3::saveState/loadState don't persist RAM
-	// content (Cartridge's job). What must be restored is the currently
-	// selected RAM bank register, so writes after loadState() land in the
-	// bank that was selected before saving.
+	/*
+		Same reasoning as above: MBC3::saveState/loadState don't persist RAM content (Cartridge's job). What must be restored is the currently
+		selected RAM bank register, so writes after loadState() land in the bank that was selected before saving.
+	*/
 	std::vector<uint8_t> rom = createROMWithBankPattern(0x8000);
 	std::vector<uint8_t> ram(0x8000, 0x00);
 	MBC3 mbc(rom, ram);
@@ -642,8 +729,7 @@ TEST_CASE("MBC3 - save/load state with multiple RAM banks", "[mbc3]")
 	std::istringstream iss(oss.str());
 	mbc2.loadState(iss);
 	
-	// Bank 2 should still be selected: writing here must land in bank 2's
-	// region of ram2, and switching away and back should still see it.
+	// Bank 2 should still be selected: writing here must land in bank 2's region of ram2, and switching away and back should still see it.
 	mbc2.writeRAM(0xA000, 0xAB);
 	REQUIRE(ram2[2 * 0x2000] == 0xAB);
 	
@@ -673,8 +759,7 @@ TEST_CASE("MBC3 - RTC HALT stops time increment", "[mbc3]")
 	mbc.writeRAM(0xA000, 59);
 	REQUIRE(mbc.readRAM(0xA000) == 59);
 	
-	// Simulate time passing (updateRTC should not increment because HALT is set).
-	// We'll call updateRTC indirectly by writing to a register.
+	// Simulate time passing (updateRTC should not increment because HALT is set). We'll call updateRTC indirectly by writing to a register.
 	mbc.writeRAM(0xA000, 0x42); // Write to seconds register.
 	// Since HALT is set, the value should remain 0x42 (not incremented).
 	REQUIRE(mbc.readRAM(0xA000) == 0x42);
@@ -699,9 +784,7 @@ TEST_CASE("MBC3 - RTC clearing HALT resumes time increment", "[mbc3]")
 	mbc.writeROM(0x4000, 0x08);
 	mbc.writeRAM(0xA000, 59);
 	
-	// Simulate time passing by calling tick.
-	// We need to wait a bit for time to pass; this test will pass in a real emulator.
-	// In unit tests, we cannot wait, so we'll just verify that HALT is cleared.
+	// Simulate time passing by calling tick. We need to wait a bit for time to pass; this test will pass in a real emulator. In unit tests, we cannot wait, so we'll just verify that HALT is cleared.
 	mbc.writeROM(0x4000, 0x0C);
 	uint8_t high = mbc.readRAM(0xA000);
 	REQUIRE((high & 0x40) == 0);

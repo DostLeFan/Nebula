@@ -24,6 +24,10 @@ namespace nebula
 			
 			inline bool hasBattery() const { return m_header.hasBattery(); } // Indicates whether the cartridge has backup RAM.
 			
+			// Forwarded to the underlying MBC (no-op for MBCs that don't need it, e.g. no RTC): callers never need to know which concrete MBC is loaded.
+			void tick(uint64_t cycles); // Advances emulated time by `cycles` T-cycles (base DMG speed).
+			void catchUpRealTime(); // Applies real (wall-clock) time elapsed since the last call/session.
+			
 			// Saving / loading complete state (MBC + external RAM).
 			void saveState(std::ostream& os) const;
 			void loadState(std::istream& is);

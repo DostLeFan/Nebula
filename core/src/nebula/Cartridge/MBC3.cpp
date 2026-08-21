@@ -2,11 +2,12 @@
 
 #include <algorithm>
 #include <stdexcept>
+#include <cstdint>
 
 namespace nebula
 {
 	// Bank 1 by default.
-	MBC3::MBC3(std::vector<uint8_t> const& romData, std::vector<uint8_t>& ramData) : m_romData(romData), m_ramData(ramData), m_ramEnabled(false), m_romBank(0x01), m_ramBank(0x00), m_rtcMode(false), m_rtcReg(0x08), m_rtc{}, m_rtcLatched{}, m_latched(false), m_latchPending(false), m_lastUpdate(std::chrono::steady_clock::now())
+	MBC3::MBC3(std::vector<uint8_t> const& romData, std::vector<uint8_t>& ramData) : m_romData(romData), m_ramData(ramData), m_ramEnabled(false), m_romBank(0x01), m_ramBank(0x00), m_rtcMode(false), m_rtcReg(0x08), m_rtc{}, m_rtcLatched{}, m_latched(false), m_latchPending(false), m_cycleAccumulator(0), m_lastRealTime(std::chrono::system_clock::now())
 	{
 		// Initialize RTC with current system time (or default values).
 		std::time_t t = std::time(nullptr);
@@ -97,8 +98,7 @@ namespace nebula
 				// Second step: if latch is pending, perform latch.
 				if(m_latchPending)
 				{
-					// Update RTC to current time before latching.
-					updateRTC();
+					// m_rtc is already up to date (tick() keeps it current as emulated cycles go by), so there's nothing to catch up here.
 					latchRTC();
 					m_latched = true;
 					m_latchPending = false;
@@ -153,18 +153,14 @@ namespace nebula
 		
 		if(m_rtcMode)
 		{
-			// Apply elapsed real time before overwriting a register, so that
-			// time accumulated in the OTHER fields isn't silently discarded.
-			updateRTC();
-			
 			uint8_t reg = m_rtcReg;
 			
 			switch(reg)
 			{
-				// Real hardware stores the raw byte, with no automatic
-				// clamping/wrapping on write ; an "invalid" value (e.g. 60
-				// seconds) is only corrected by the next real-time tick,
-				// exactly as updateRTC() naturally does.
+				/*
+					Real hardware stores the raw byte, with no automatic clamping/wrapping on write ; an "invalid" value (e.g. 60
+					seconds) is only corrected once enough ticks accumulate, exactly as incrementOneSecond() naturally does.
+				*/
 				case 0x08: m_rtc.seconds = value; break;
 				case 0x09: m_rtc.minutes = value; break;
 				case 0x0A: m_rtc.hours = value; break;
@@ -177,10 +173,6 @@ namespace nebula
 				
 				default: break;
 			}
-			
-			// Reset last update time: elapsed time was already applied above,
-			// so counting restarts from now with the freshly written value.
-			m_lastUpdate = std::chrono::steady_clock::now();
 			
 			// Note: m_rtcLatched is NOT updated here; only m_rtc is modified.
 			// If latched, the latched values remain unchanged.
@@ -213,9 +205,15 @@ namespace nebula
 		os.write(reinterpret_cast<char const*>(&m_rtc), sizeof(m_rtc));
 		os.write(reinterpret_cast<char const*>(&m_rtcLatched), sizeof(m_rtcLatched));
 		
-		std::chrono::steady_clock::duration duration = m_lastUpdate.time_since_epoch();
-		std::chrono::seconds::rep seconds = std::chrono::duration_cast<std::chrono::seconds>(duration).count();
-		os.write(reinterpret_cast<char const*>(&seconds), sizeof(seconds));
+		// Cycle accumulator: deterministic, portable as-is across machines/runs.
+		os.write(reinterpret_cast<char const*>(&m_cycleAccumulator), sizeof(m_cycleAccumulator));
+		
+		/*
+			Wall-clock reference (system_clock epoch seconds), used only by catchUpRealTime(). Stored as a fixed-width int64_t rather than the
+			platform-defined std::chrono::seconds::rep, so save files stay portable across machines/compilers.
+		*/
+		int64_t wallSeconds = std::chrono::duration_cast<std::chrono::seconds>(m_lastRealTime.time_since_epoch()).count();
+		os.write(reinterpret_cast<char const*>(&wallSeconds), sizeof(wallSeconds));
 	}
 	
 	void MBC3::loadState(std::istream& is)
@@ -233,43 +231,106 @@ namespace nebula
 		is.read(reinterpret_cast<char*>(&m_rtc), sizeof(m_rtc));
 		is.read(reinterpret_cast<char*>(&m_rtcLatched), sizeof(m_rtcLatched));
 		
-		long long seconds;
-		is.read(reinterpret_cast<char*>(&seconds), sizeof(seconds));
-		std::chrono::seconds duration = std::chrono::seconds(seconds);
-		m_lastUpdate = std::chrono::steady_clock::time_point(duration);
+		is.read(reinterpret_cast<char*>(&m_cycleAccumulator), sizeof(m_cycleAccumulator));
+		
+		int64_t wallSeconds = 0;
+		is.read(reinterpret_cast<char*>(&wallSeconds), sizeof(wallSeconds));
+		m_lastRealTime = std::chrono::system_clock::time_point(std::chrono::seconds(wallSeconds));
+		
+		/*
+			Deliberately NOT calling catchUpRealTime() here: loadState() must be a pure, deterministic state restore (needed for rewind/rollback, which
+			reload states constantly and must never touch the wall clock). Whoever resumes a session (fresh cartridge load, app coming back from the
+			background...) is responsible for calling catchUpRealTime() explicitly, exactly once, afterwards.
+		*/
 	}
 	
 	
 	void MBC3::tick(uint64_t cycles)
 	{
-		(void)cycles;
-		// RTC update will be called from read/write RAM as needed.
-		// This method is called by the emulator to keep RTC in sync.
-		// We update RTC periodically to avoid lag.
-		updateRTC();
+		/*
+			HALT (bit 6 of daysHigh): on real hardware the RTC counter genuinely stops advancing while halted - time isn't "banked" for later, it's
+			simply not counted. So cycles elapsed while halted are dropped here rather than accumulated, which also avoids a large burst catch-up the
+			instant HALT is cleared.
+		*/
+		if(m_rtc.daysHigh & 0x40)
+			return;
+		
+		/*
+			Cycle-driven, deterministic advancement: this is what keeps fast-forward (more cycles/host-second -> RTC speeds up in lockstep with the game, which
+			is correct) and rewind/save-states (no dependency on wall-clock time) well-behaved. See catchUpRealTime() for the wall-clock-driven counterpart
+			used only across sessions.
+		*/
+		m_cycleAccumulator += cycles;
+		
+		while(m_cycleAccumulator >= CPU_FREQ_HZ)
+		{
+			m_cycleAccumulator -= CPU_FREQ_HZ;
+			incrementOneSecond();
+		}
 	}
 	
 	
-	void MBC3::updateRTC()
+	void MBC3::catchUpRealTime()
+	{
+		std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+		std::chrono::seconds elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - m_lastRealTime);
+		
+		// Clamp negative deltas (system clock moved backwards, e.g. NTP adjustment, or a save file that's inconsistent) to zero rather than underflowing.
+		uint64_t secondsElapsed = static_cast<uint64_t>(std::max<std::chrono::seconds::rep>(0, elapsed.count()));
+		
+		applyElapsedSeconds(secondsElapsed);
+		
+		/*
+			Consume the elapsed real time whether or not it actually got applied (e.g. dropped because HALT was set): time spent halted while the
+			emulator wasn't running is lost on real hardware too, not carried forward to the next catch-up.
+		*/
+		m_lastRealTime = now;
+	}
+	
+	
+	void MBC3::incrementOneSecond()
+	{
+		/*
+			Called at most once per emulated second by tick(), so a single-unit carry (rather than a division) is enough - and it naturally corrects
+			an "invalid" raw-written value (e.g. seconds=60) after just one tick, matching real hardware.
+		*/
+		uint16_t seconds = static_cast<uint16_t>(m_rtc.seconds) + 1;
+		uint16_t minutes = m_rtc.minutes;
+		uint16_t hours = m_rtc.hours;
+		uint16_t days = static_cast<uint16_t>(m_rtc.daysLow) | (static_cast<uint16_t>(m_rtc.daysHigh & 0x01) << 8);
+		
+		if(seconds >= 60) { seconds -= 60; ++minutes; }
+		if(minutes >= 60) { minutes -= 60; ++hours; }
+		if(hours >= 24) { hours -= 24; ++days; }
+		
+		if(days > 511)
+		{
+			days -= 512;
+			m_rtc.daysHigh |= 0x80; // Set CARRY flag (bit 7).
+		}
+		
+		m_rtc.seconds = static_cast<uint8_t>(seconds);
+		m_rtc.minutes = static_cast<uint8_t>(minutes);
+		m_rtc.hours = static_cast<uint8_t>(hours);
+		m_rtc.daysLow = static_cast<uint8_t>(days & 0xFF);
+		m_rtc.daysHigh = (m_rtc.daysHigh & 0xFE) | static_cast<uint8_t>((days >> 8) & 0x01);
+	}
+	
+	void MBC3::applyElapsedSeconds(uint64_t secondsElapsed)
 	{
 		// If RTC is halted (bit 6 of daysHigh), do not update.
 		if(m_rtc.daysHigh & 0x40)
 			return;
 		
-		std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-		std::chrono::seconds elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - m_lastUpdate);
-		uint32_t secondsElapsed = static_cast<uint32_t>(elapsed.count());
-		
 		if(secondsElapsed == 0)
 			return;
 		
-		// Accumulate time.
-		uint32_t totalSeconds = secondsElapsed + m_rtc.seconds;
-		uint32_t totalMinutes = m_rtc.minutes + (totalSeconds / 60);
-		uint32_t totalHours = m_rtc.hours + (totalMinutes / 60);
-		uint32_t totalDays = (m_rtc.daysLow | (static_cast<uint32_t>(m_rtc.daysHigh & 0x01) << 8)) + (totalHours / 24);
+		// Bulk O(1) carry: needed here (unlike incrementOneSecond()) because a cold catch-up can span a huge gap (days/weeks off), so an O(n) loop of single-second increments isn't acceptable.
+		uint64_t totalSeconds = secondsElapsed + m_rtc.seconds;
+		uint64_t totalMinutes = m_rtc.minutes + (totalSeconds / 60);
+		uint64_t totalHours = m_rtc.hours + (totalMinutes / 60);
+		uint64_t totalDays = (m_rtc.daysLow | (static_cast<uint64_t>(m_rtc.daysHigh & 0x01) << 8)) + (totalHours / 24);
 		
-		// Apply modulo with explicit casts.
 		m_rtc.seconds = static_cast<uint8_t>(totalSeconds % 60);
 		m_rtc.minutes = static_cast<uint8_t>(totalMinutes % 60);
 		m_rtc.hours = static_cast<uint8_t>(totalHours % 24);
@@ -285,8 +346,6 @@ namespace nebula
 		
 		m_rtc.daysLow = static_cast<uint8_t>(totalDays & 0xFF);
 		m_rtc.daysHigh = (m_rtc.daysHigh & 0xFE) | static_cast<uint8_t>((totalDays >> 8) & 0x01);
-		
-		m_lastUpdate = now;
 	}
 	
 	void MBC3::latchRTC()

@@ -25,6 +25,13 @@ namespace nebula
 			virtual void loadState(std::istream& is) = 0;
 			
 			virtual void tick(uint64_t cycles) { (void)cycles; }
+			
+			/*
+				Applies real (wall-clock) time elapsed since the last call, in a single step. Meant to be called once per "cold" transition - typically right
+				after loadState() when resuming a session - NOT on every emulated step. No-op by default: only MBCs with an actual real-time clock (currently
+				MBC3) need to override it.
+			*/
+			virtual void catchUpRealTime() { }
 	};
 }
 

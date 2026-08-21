@@ -77,6 +77,17 @@ namespace nebula
 	}
 	
 	
+	void Cartridge::tick(uint64_t cycles)
+	{
+		m_mbc->tick(cycles);
+	}
+	
+	void Cartridge::catchUpRealTime()
+	{
+		m_mbc->catchUpRealTime();
+	}
+	
+	
 	void Cartridge::createMBC()
 	{
 		switch(m_header.mbcType)
