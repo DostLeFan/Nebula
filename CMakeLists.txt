@@ -10,14 +10,20 @@ set(NEBULA_LIB_NAME nebula-core)
 set(NEBULA_EMULATOR_NAME nebula)
 set(NEBULA_NODE_MODULE_NAME nebula)
 set(NEBULA_TESTS_NAME nebula_tests)
+set(NEBULA_OPCODE_GENERATOR_NAME nebula_opcode_generator)
 
 include(GNUInstallDirs)
 
 option(NEBULA_BUILD_EMULATOR_APP "Build emulator executable" ON)
 option(NEBULA_BUILD_NODE "Build NodeJS bindings" OFF)
-option(NEBULA_BUILD_TEST "Build unit tests" ON)
+option(NEBULA_BUILD_TEST "Build unit tests" OFF)
+option(NEBULA_REGEN_OPCODES "Build the CPU opcode table generator" OFF)
 
 add_subdirectory(core)
+
+if(NEBULA_REGEN_OPCODES)
+	add_subdirectory(tools/OpcodeGenerator)
+endif()
 
 if(NEBULA_BUILD_EMULATOR_APP)
 	add_subdirectory(emulator)

@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - MBC3's RTC is now driven by emulated T-cycles instead of wall-clock time, with real time elapsed while the emulator wasn't running applied separately via a new explicit `catchUpRealTime()` (added to the `MBC` base interface), making it safe for fast-forward, rewind and portable save states
+- Added a "tools" subdirectory, which contains tools created to help on Nebula's project (for dev or other)
+- Created "OpcodeGenerator", in "tools" subdirectory, which create metadata of GameBoy opcodes
 
 ## [0.0.8] - 2026-08-20
 
