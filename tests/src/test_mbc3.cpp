@@ -521,6 +521,49 @@ TEST_CASE("MBC3 - RTC days and carry flag", "[mbc3]")
 	REQUIRE((high & 0x80) != 0); // Carry flag set.
 }
 
+TEST_CASE("MBC3 - RTC carry flag is sticky across catchUpRealTime()", "[mbc3]")
+{
+	/*
+		On real hardware, CARRY (bit 7 of daysHigh) is only ever set by the RTC on overflow; it is
+		never cleared automatically just because the day counter later falls back under 512 -- the
+		game must clear it explicitly. This must hold whether the day count advances via tick()
+		(in-session, cycle-driven) or via catchUpRealTime() (cold, wall-clock-driven): both paths
+		must agree on CARRY semantics.
+	*/
+	std::vector<uint8_t> rom = createROMWithBankPattern(0x8000);
+	std::vector<uint8_t> ram(0x2000, 0x00);
+	MBC3 mbc(rom, ram);
+	
+	mbc.writeROM(0x0000, 0x0A);
+	
+	// Force an overflow first (day 511 -> wraps to 0, sets CARRY), the same way as the test above.
+	mbc.writeROM(0x4000, 0x0B);
+	mbc.writeRAM(0xA000, 0xFF);
+	mbc.writeROM(0x4000, 0x0C);
+	mbc.writeRAM(0xA000, 0x01);
+	
+	std::ostringstream ossOverflow(std::ios::binary);
+	mbc.saveState(ossOverflow);
+	std::istringstream issOverflow(backdateRTCState(ossOverflow.str(), 86400), std::ios::binary);
+	mbc.loadState(issOverflow);
+	mbc.catchUpRealTime();
+	
+	mbc.writeROM(0x4000, 0x0C);
+	REQUIRE((mbc.readRAM(0xA000) & 0x80) != 0); // Sanity check: CARRY is set after the overflow.
+	
+	// Now let a small, non-overflowing amount of real time elapse (a handful of seconds), via a
+	// second, independent catchUpRealTime() call -- the exact scenario that used to clear CARRY.
+	std::ostringstream ossSmallGap(std::ios::binary);
+	mbc.saveState(ossSmallGap);
+	std::istringstream issSmallGap(backdateRTCState(ossSmallGap.str(), 5), std::ios::binary);
+	mbc.loadState(issSmallGap);
+	mbc.catchUpRealTime();
+	
+	mbc.writeROM(0x4000, 0x0C);
+	uint8_t high = mbc.readRAM(0xA000);
+	REQUIRE((high & 0x80) != 0); // CARRY must remain set: it is sticky, not auto-cleared.
+}
+
 // RTC latch behavior.
 
 TEST_CASE("MBC3 - RTC latch separates current and latched values", "[mbc3]")

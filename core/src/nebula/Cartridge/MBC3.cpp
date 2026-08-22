@@ -335,14 +335,19 @@ namespace nebula
 		m_rtc.minutes = static_cast<uint8_t>(totalMinutes % 60);
 		m_rtc.hours = static_cast<uint8_t>(totalHours % 24);
 		
-		// Day counter: 9 bits (0-511).
+		/*
+			Day counter: 9 bits (0-511). CARRY (bit 7) is sticky on real hardware: it is only ever
+			set here on overflow, never auto-cleared just because the day count happens to fall
+			back under 512 -- the game is responsible for clearing it explicitly (writing back
+			daysHigh with bit 7 low). This matches incrementOneSecond(), which never touches the
+			bit outside of setting it, so both code paths (tick()-driven and catch-up-driven) now
+			agree on CARRY semantics.
+		*/
 		if(totalDays > 511)
 		{
 			totalDays %= 512;
 			m_rtc.daysHigh |= 0x80; // Set CARRY flag (bit 7).
 		}
-		else
-			m_rtc.daysHigh &= ~0x80; // Clear CARRY flag.
 		
 		m_rtc.daysLow = static_cast<uint8_t>(totalDays & 0xFF);
 		m_rtc.daysHigh = (m_rtc.daysHigh & 0xFE) | static_cast<uint8_t>((totalDays >> 8) & 0x01);

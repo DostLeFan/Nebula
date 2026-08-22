@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a "tools" subdirectory, which contains tools created to help on Nebula's project (for dev or other)
 - Created "OpcodeGenerator", in "tools" subdirectory, which create metadata of GameBoy opcodes
 
+### Fixed
+
+- MBC3 fix for stop/launch emulator
+
 ## [0.0.8] - 2026-08-20
 
 ### Fixed
